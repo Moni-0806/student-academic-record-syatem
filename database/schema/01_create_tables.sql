@@ -192,3 +192,86 @@ INSERT INTO subjects (subject_name, subject_code, department_id, max_mark) VALUE
 -- Admin user (username: admin, password: admin123)
 INSERT INTO users (username, password_hash, email, role) VALUES
 ('admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@minarehighschool.com', 'admin');
+
+-- ============================================
+-- VIEW: Class report with rank, total, average, status
+-- ============================================
+
+CREATE OR REPLACE VIEW vw_class_report AS
+SELECT
+    s.student_id,
+    s.student_name,
+    s.gender,
+    s.student_code,
+    c.class_id,
+    c.class_name,
+    c.grade_level,
+    m.academic_year,
+    m.semester,
+    t.teacher_name AS homeroom_teacher,
+    MAX(CASE WHEN sub.subject_code = 'MATH' THEN m.mark END) AS maths,
+    MAX(CASE WHEN sub.subject_code = 'ENG'  THEN m.mark END) AS english,
+    MAX(CASE WHEN sub.subject_code = 'BIO'  THEN m.mark END) AS biology,
+    MAX(CASE WHEN sub.subject_code = 'CHEM' THEN m.mark END) AS chemistry,
+    MAX(CASE WHEN sub.subject_code = 'PHY'  THEN m.mark END) AS physics,
+    SUM(m.mark)                                               AS total,
+    ROUND(AVG(m.mark), 2)                                     AS average,
+    CASE WHEN AVG(m.mark) >= 50 THEN 'PASS' ELSE 'FAIL' END  AS status,
+    RANK() OVER (
+        PARTITION BY c.class_id, m.academic_year, m.semester
+        ORDER BY SUM(m.mark) DESC
+    ) AS rank
+FROM students s
+JOIN classes  c   ON s.class_id   = c.class_id
+JOIN marks    m   ON s.student_id = m.student_id
+JOIN subjects sub ON m.subject_id = sub.subject_id
+LEFT JOIN homeroom_assignments ha
+       ON c.class_id      = ha.class_id
+      AND m.academic_year = ha.academic_year
+      AND m.semester      = ha.semester
+LEFT JOIN teachers t ON ha.teacher_id = t.teacher_id
+GROUP BY
+    s.student_id, s.student_name, s.gender, s.student_code,
+    c.class_id, c.class_name, c.grade_level,
+    m.academic_year, m.semester, t.teacher_name;
+
+
+-- ============================================
+-- PROCEDURE: Get class report
+-- Usage: CALL sp_get_class_report(1, '2025', 1);
+-- ============================================
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_get_class_report$$
+CREATE PROCEDURE sp_get_class_report(
+    IN p_class_id      INT,
+    IN p_academic_year VARCHAR(10),
+    IN p_semester      INT
+)
+BEGIN
+    -- Student rows ordered by rank
+    SELECT
+        student_id, student_name, gender, student_code,
+        class_name, grade_level, homeroom_teacher,
+        maths, english, biology, chemistry, physics,
+        total, average, status, rank
+    FROM vw_class_report
+    WHERE class_id      = p_class_id
+      AND academic_year = p_academic_year
+      AND semester      = p_semester
+    ORDER BY rank;
+
+    -- Class summary
+    SELECT
+        COUNT(*)                                               AS total_students,
+        SUM(CASE WHEN status = 'PASS' THEN 1 ELSE 0 END)     AS passed,
+        SUM(CASE WHEN status = 'FAIL' THEN 1 ELSE 0 END)     AS failed,
+        ROUND(AVG(average), 2)                                AS class_average
+    FROM vw_class_report
+    WHERE class_id      = p_class_id
+      AND academic_year = p_academic_year
+      AND semester      = p_semester;
+END$$
+
+DELIMITER ;
