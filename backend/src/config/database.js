@@ -8,12 +8,17 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME || 'student_records',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
-    connectionLimit: 2,
-    queueLimit: 10,
-    idleTimeout: 10000,
-    maxIdle: 1
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-console.log('✓ Database pool created');
+pool.getConnection()
+    .then(connection => {
+        console.log('✓ Database connected successfully');
+        connection.release();
+    })
+    .catch(err => {
+        console.error('✗ Database connection failed:', err.message);
+    });
 
 module.exports = pool;
