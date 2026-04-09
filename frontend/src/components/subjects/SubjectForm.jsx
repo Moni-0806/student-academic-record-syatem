@@ -5,8 +5,9 @@ import { getDepartments } from '../../services/departmentService';
 const SubjectForm = ({ subject, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         subject_name: '',
+        subject_code: '',
         department_id: '',
-        max_marks: 100
+        max_mark: 100
     });
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -17,8 +18,9 @@ const SubjectForm = ({ subject, onClose, onSuccess }) => {
         if (subject) {
             setFormData({
                 subject_name: subject.subject_name || '',
+                subject_code: subject.subject_code || '',
                 department_id: subject.department_id || '',
-                max_marks: subject.max_marks || 100
+                max_mark: subject.max_mark || 100
             });
         }
     }, [subject]);
@@ -49,7 +51,7 @@ const SubjectForm = ({ subject, onClose, onSuccess }) => {
             const dataToSubmit = {
                 ...formData,
                 department_id: parseInt(formData.department_id),
-                max_marks: parseInt(formData.max_marks)
+                max_mark: parseInt(formData.max_mark)
             };
 
             if (subject) {
@@ -90,6 +92,19 @@ const SubjectForm = ({ subject, onClose, onSuccess }) => {
                     </div>
 
                     <div className="form-group">
+                        <label>Subject Code <span className="required">*</span></label>
+                        <input
+                            type="text"
+                            name="subject_code"
+                            placeholder="e.g., MATH, ENG, BIO"
+                            value={formData.subject_code}
+                            onChange={handleChange}
+                            required
+                        />
+                        <small className="form-hint">Short unique code for the subject</small>
+                    </div>
+
+                    <div className="form-group">
                         <label>Department <span className="required">*</span></label>
                         <select
                             name="department_id"
@@ -111,9 +126,9 @@ const SubjectForm = ({ subject, onClose, onSuccess }) => {
                         <label>Maximum Marks <span className="required">*</span></label>
                         <input
                             type="number"
-                            name="max_marks"
+                            name="max_mark"
                             placeholder="100"
-                            value={formData.max_marks}
+                            value={formData.max_mark}
                             onChange={handleChange}
                             min="1"
                             max="1000"
