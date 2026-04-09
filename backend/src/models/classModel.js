@@ -4,18 +4,11 @@ class ClassModel {
     // Get all classes
     static async findAll() {
         const [rows] = await db.query(`
-            SELECT 
-                c.*,
-                t.teacher_name as homeroom_teacher,
-                ha.semester as homeroom_semester
+            SELECT c.*, t.teacher_name as homeroom_teacher
             FROM classes c
-            LEFT JOIN (
-                SELECT class_id, teacher_id, academic_year, semester,
-                       ROW_NUMBER() OVER (PARTITION BY class_id, academic_year ORDER BY semester DESC) as rn
-                FROM homeroom_assignments
-            ) ha ON c.class_id = ha.class_id 
+            LEFT JOIN homeroom_assignments ha 
+                ON c.class_id = ha.class_id 
                 AND c.academic_year = ha.academic_year
-                AND ha.rn = 1
             LEFT JOIN teachers t ON ha.teacher_id = t.teacher_id
             ORDER BY c.grade_level, c.class_name
         `);
